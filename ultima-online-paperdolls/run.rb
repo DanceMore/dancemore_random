@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+# keep it minimal plz
+require 'set'
+
 # Define constants first for better organization and readability
 BASE_URL = "https://uolostlands.com/imaging/outfit-creator/"
 OUTPUT_DIR_ROOT = "output"
@@ -39,6 +42,9 @@ GENDERS = {
 HUE_RANGE = [0]
 
 def generate_curl_commands
+  # Create output directory structure
+  ensure_directories
+
   File.open(CURL_COMMANDS_FILE, 'w') do |file|
     # Process all categories, including base model with gender hues
     OBJECT_CATEGORIES.each_value do |category|
@@ -48,6 +54,34 @@ def generate_curl_commands
 
   puts "\nGenerated #{CURL_COMMANDS_FILE} with all download commands."
   puts "Execute it with: bash #{CURL_COMMANDS_FILE}"
+end
+
+def ensure_directories
+  # Create output directory and all necessary subdirectories
+  directories = Set.new
+
+  OBJECT_CATEGORIES.each_value do |category|
+    category_name = category[:name].downcase.gsub(' ', '_')
+
+    if category_name == 'base_model'
+      GENDERS.keys.each do |gender|
+        dir_path = File.join(OUTPUT_DIR_ROOT, gender.to_s, category_name)
+        directories << dir_path
+      end
+    else
+      category[:ids].each do |id|
+        GENDERS.keys.each do |gender|
+          dir_path = File.join(OUTPUT_DIR_ROOT, gender.to_s, category_name, id.to_s)
+          directories << dir_path
+        end
+      end
+    end
+  end
+
+  # Create all required directories using mkdir -p to ensure parents exist
+  directories.each do |dir|
+    system("mkdir -p #{dir}")
+  end
 end
 
 def process_category(category, file)
